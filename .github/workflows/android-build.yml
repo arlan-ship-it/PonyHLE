@@ -1,0 +1,48 @@
+name: Build Ponyhle APK
+
+on:
+  push:
+    branches: [ trunk, main ] 
+  workflow_dispatch: 
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive 
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android 
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25c 
+
+      - name: Build with Gradle
+        run: |
+          cd src/interface/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ponyhle-debug-apk
+          path: src/interface/android/app/build/outputs/apk/debug/*.apk
